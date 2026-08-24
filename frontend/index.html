@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CareerMate AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#11131A;
+    --panel:#181B24;
+    --panel-2:#20242F;
+    --line:#2B303C;
+    --text:#EDEEF2;
+    --text-dim:#9BA1B0;
+    --growth:#2FBF8F;
+    --growth-dim:#1E4A3D;
+    --gold:#E8A33D;
+    --danger:#E2586B;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--ink); color:var(--text);
+    font-family:'Inter',system-ui,sans-serif; min-height:100vh;
+  }
+  h1,h2,h3,.brand{font-family:'Space Grotesk',system-ui,sans-serif;}
+  .app{display:flex; min-height:100vh;}
+
+  /* ---- Auth screen ---- */
+  #authScreen{
+    width:100%; display:flex; align-items:center; justify-content:center; min-height:100vh;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(47,191,143,0.12), transparent 40%),
+      radial-gradient(circle at 80% 0%, rgba(232,163,61,0.10), transparent 40%),
+      var(--ink);
+  }
+  .auth-card{
+    width:380px; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:36px 32px;
+  }
+  .auth-card .brand{font-size:26px; font-weight:700; margin:0 0 4px;}
+  .auth-card .tag{color:var(--text-dim); font-size:14px; margin-bottom:28px;}
+  .trajectory{width:100%; height:46px; margin-bottom:20px;}
+  label{display:block; font-size:12px; color:var(--text-dim); margin:14px 0 6px; text-transform:uppercase; letter-spacing:.04em;}
+  input, select, textarea{
+    width:100%; padding:11px 12px; border-radius:8px; border:1px solid var(--line);
+    background:var(--panel-2); color:var(--text); font-size:14px; font-family:inherit;
+  }
+  input:focus, select:focus, textarea:focus{outline:none; border-color:var(--growth);}
+  button.primary{
+    width:100%; margin-top:22px; padding:12px; border:none; border-radius:8px;
+    background:var(--growth); color:#08251C; font-weight:600; font-size:14px; cursor:pointer;
+  }
+  button.primary:hover{background:#39d49f;}
+  button.ghost{
+    background:transparent; border:1px solid var(--line); color:var(--text);
+    padding:8px 14px; border-radius:8px; cursor:pointer; font-size:13px;
+  }
+  .switch-line{text-align:center; margin-top:16px; font-size:13px; color:var(--text-dim);}
+  .switch-line a{color:var(--gold); cursor:pointer; text-decoration:none;}
+  .error-msg{color:var(--danger); font-size:13px; margin-top:10px; min-height:16px;}
+
+  /* ---- Main app shell ---- */
+  #mainScreen{display:none; width:100%;}
+  .sidebar{
+    width:220px; background:var(--panel); border-right:1px solid var(--line);
+    padding:24px 16px; position:fixed; top:0; bottom:0;
+  }
+  .sidebar .brand{font-size:20px; margin-bottom:32px; padding-left:8px;}
+  .nav-item{
+    display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px;
+    color:var(--text-dim); font-size:14px; cursor:pointer; margin-bottom:4px;
+  }
+  .nav-item:hover{background:var(--panel-2); color:var(--text);}
+  .nav-item.active{background:var(--growth-dim); color:var(--growth); font-weight:600;}
+  .content{margin-left:220px; padding:32px 40px; max-width:980px;}
+  .page{display:none;}
+  .page.active{display:block;}
+  .page-title{font-size:24px; margin:0 0 24px;}
+
+  .stat-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:32px;}
+  .stat-card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:18px;}
+  .stat-card .num{font-family:'Space Grotesk'; font-size:28px; font-weight:700; color:var(--growth);}
+  .stat-card .label{font-size:12px; color:var(--text-dim); margin-top:4px;}
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:20px; margin-bottom:14px;}
+  .job-title{font-size:16px; font-weight:600; margin:0 0 4px;}
+  .job-meta{color:var(--text-dim); font-size:13px; margin-bottom:10px;}
+  .pill{display:inline-block; padding:2px 10px; border-radius:20px; font-size:11px; background:var(--panel-2); color:var(--text-dim); margin-right:6px;}
+  .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+  .search-bar{display:flex; gap:10px; margin-bottom:20px;}
+  .search-bar input, .search-bar select{width:auto;}
+  .search-bar input{flex:1;}
+
+  .score-ring{
+    width:110px; height:110px; border-radius:50%;
+    background: conic-gradient(var(--growth) calc(var(--pct,0)*1%), var(--panel-2) 0);
+    display:flex; align-items:center; justify-content:center; margin:0 auto 8px;
+  }
+  .score-ring span{
+    width:86px; height:86px; border-radius:50%; background:var(--panel);
+    display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk';
+    font-size:22px; font-weight:700;
+  }
+  .suggestion{padding:8px 0; border-bottom:1px solid var(--line); font-size:14px; color:var(--text-dim);}
+  .suggestion:last-child{border-bottom:none;}
+
+  .qbox{margin-bottom:18px;}
+  .qbox .qn{font-size:13px; color:var(--text-dim); margin-bottom:4px;}
+  .qbox .qtext{font-size:15px; margin-bottom:8px;}
+  #feedbackBox{display:none;}
+
+  .status-Applied{color:var(--text-dim);}
+  .status-Interview{color:var(--gold);}
+  .status-Selected{color:var(--growth);}
+  .status-Rejected{color:var(--danger);}
+  .status-Shortlisted{color:#7DA6FF;}
+
+  .empty{color:var(--text-dim); font-size:14px; padding:20px 0;}
+  @media(max-width:800px){
+    .sidebar{display:none;}
+    .content{margin-left:0; padding:20px;}
+    .stat-grid{grid-template-columns:repeat(2,1fr);}
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= AUTH SCREEN ================= -->
+<div id="authScreen">
+  <div class="auth-card">
+    <svg class="trajectory" viewBox="0 0 300 46"><polyline points="0,40 60,32 110,34 160,18 210,20 260,6 300,4" fill="none" stroke="#2FBF8F" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="brand">CareerMate AI</div>
+    <div class="tag">Your AI career assistant</div>
+
+    <div id="loginForm">
+      <label>Email</label>
+      <input type="email" id="loginEmail" placeholder="you@example.com" />
+      <label>Password</label>
+      <input type="password" id="loginPassword" placeholder="••••••••" />
+      <button class="primary" onclick="login()">Log in</button>
+      <div class="error-msg" id="loginError"></div>
+      <div class="switch-line">Don't have an account? <a onclick="showRegister()">Sign up</a></div>
+    </div>
+
+    <div id="registerForm" style="display:none;">
+      <label>Name</label>
+      <input type="text" id="regName" placeholder="Full name" />
+      <label>Email</label>
+      <input type="email" id="regEmail" placeholder="you@example.com" />
+      <label>Password</label>
+      <input type="password" id="regPassword" placeholder="Min 6 characters" />
+      <button class="primary" onclick="register()">Create account</button>
+      <div class="error-msg" id="regError"></div>
+      <div class="switch-line">Already have an account? <a onclick="showLogin()">Log in</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MAIN APP ================= -->
+<div id="mainScreen">
+  <div class="sidebar">
+    <div class="brand">CareerMate</div>
+    <div class="nav-item active" data-page="dashboard" onclick="goto('dashboard')">📊 Dashboard</div>
+    <div class="nav-item" data-page="jobs" onclick="goto('jobs')">💼 Find Jobs</div>
+    <div class="nav-item" data-page="resume" onclick="goto('resume')">📄 Resume Analyzer</div>
+    <div class="nav-item" data-page="interview" onclick="goto('interview')">🤖 Interview Prep</div>
+    <div class="nav-item" data-page="applications" onclick="goto('applications')">📈 Applications</div>
+    <div class="nav-item" data-page="profile" onclick="goto('profile')">👤 Profile</div>
+    <div class="nav-item" onclick="logout()" style="margin-top:24px;">🚪 Log out</div>
+  </div>
+
+  <div class="content">
+
+    <!-- Dashboard -->
+    <div class="page active" id="page-dashboard">
+      <h1 class="page-title" id="dashGreeting">Hi 👋</h1>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="num" id="statResume">—</div><div class="label">Resume Score</div></div>
+        <div class="stat-card"><div class="num" id="statApps">—</div><div class="label">Applications</div></div>
+        <div class="stat-card"><div class="num" id="statInterviews">—</div><div class="label">Interviews</div></div>
+        <div class="stat-card"><div class="num" id="statSaved">—</div><div class="label">Saved Jobs</div></div>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0;">Recommended next step</h3>
+        <p style="color:var(--text-dim); font-size:14px;" id="dashTip">Upload your resume to get your ATS score and personalized suggestions.</p>
+      </div>
+    </div>
+
+    <!-- Jobs -->
+    <div class="page" id="page-jobs">
+      <h1 class="page-title">Find Jobs</h1>
+      <div class="search-bar">
+        <input type="text" id="jobQuery" placeholder="🔍 Search job title..." />
+        <input type="text" id="jobLocation" placeholder="Location" />
+        <select id="jobExperience">
+          <option value="">Any experience</option>
+          <option value="Fresher">Fresher</option>
+          <option value="0-1">0-1 years</option>
+        </select>
+        <button class="ghost" onclick="loadJobs()">Search</button>
+      </div>
+      <div id="jobsList"></div>
+    </div>
+
+    <!-- Resume Analyzer -->
+    <div class="page" id="page-resume">
+      <h1 class="page-title">Resume Analyzer</h1>
+      <div class="card">
+        <input type="file" id="resumeFile" accept=".pdf,.docx" />
+        <button class="primary" style="margin-top:14px;" onclick="uploadResume()">Upload &amp; Analyze</button>
+        <div class="error-msg" id="resumeError"></div>
+      </div>
+      <div id="resumeResult"></div>
+    </div>
+
+    <!-- Interview -->
+    <div class="page" id="page-interview">
+      <h1 class="page-title">Interview Preparation</h1>
+      <div class="card" id="interviewSetup">
+        <label>Role</label>
+        <select id="interviewRole">
+          <option>Software Developer</option>
+          <option>Python Developer</option>
+          <option>HR</option>
+        </select>
+        <label>Difficulty</label>
+        <select id="interviewDifficulty">
+          <option>Easy</option>
+          <option>Medium</option>
+        </select>
+        <button class="primary" style="margin-top:14px;" onclick="startInterview()">Start Interview</button>
+        <div class="error-msg" id="interviewError"></div>
+      </div>
+      <div id="interviewQuestions" style="display:none;"></div>
+      <div class="card" id="feedbackBox">
+        <h3 style="margin-top:0;">AI Feedback</h3>
+        <div class="score-ring" id="feedbackRing"><span id="feedbackScore">–</span></div>
+        <p id="feedbackText" style="text-align:center; color:var(--text-dim);"></p>
+      </div>
+    </div>
+
+    <!-- Applications -->
+    <div class="page" id="page-applications">
+      <h1 class="page-title">My Applications</h1>
+      <div id="applicationsList"></div>
+    </div>
+
+    <!-- Profile -->
+    <div class="page" id="page-profile">
+      <h1 class="page-title">My Profile</h1>
+      <div class="card">
+        <label>Name</label>
+        <input type="text" id="profName" />
+        <label>Phone</label>
+        <input type="text" id="profPhone" />
+        <label>Location</label>
+        <input type="text" id="profLocation" />
+        <button class="primary" onclick="saveProfile()">Save changes</button>
+        <div class="error-msg" id="profError" style="color:var(--growth);"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const API = "http://localhost:8000/api";
+let token = localStorage.getItem("cm_token") || null;
+let currentQuestions = [];
+
+function showLogin(){ document.getElementById('loginForm').style.display='block'; document.getElementById('registerForm').style.display='none'; }
+function showRegister(){ document.getElementById('loginForm').style.display='none'; document.getElementById('registerForm').style.display='block'; }
+
+async function api(path, opts={}){
+  const headers = opts.headers || {};
+  if (token) headers["Authorization"] = "Bearer " + token;
+  if (!(opts.body instanceof FormData) && opts.body){
+    headers["Content-Type"] = "application/json";
+  }
+  const res = await fetch(API + path, {...opts, headers});
+  if (!res.ok){
+    const err = await res.json().catch(()=>({detail:"Request failed"}));
+    throw new Error(err.detail || "Request failed");
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+async function register(){
+  const name = document.getElementById('regName').value;
+  const email = document.getElementById('regEmail').value;
+  const password = document.getElementById('regPassword').value;
+  try{
+    const data = await api('/auth/register', {method:'POST', body: JSON.stringify({name, email, password})});
+    token = data.access_token; localStorage.setItem('cm_token', token);
+    enterApp();
+  }catch(e){ document.getElementById('regError').innerText = e.message; }
+}
+
+async function login(){
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+  try{
+    const data = await api('/auth/login', {method:'POST', body: JSON.stringify({email, password})});
+    token = data.access_token; localStorage.setItem('cm_token', token);
+    enterApp();
+  }catch(e){ document.getElementById('loginError').innerText = e.message; }
+}
+
+function logout(){
+  token = null; localStorage.removeItem('cm_token');
+  document.getElementById('mainScreen').style.display='none';
+  document.getElementById('authScreen').style.display='flex';
+}
+
+async function enterApp(){
+  document.getElementById('authScreen').style.display='none';
+  document.getElementById('mainScreen').style.display='flex';
+  try{
+    const me = await api('/users/profile');
+    document.getElementById('dashGreeting').innerText = `Hi, ${me.name.split(' ')[0]} 👋`;
+    document.getElementById('profName').value = me.name || '';
+    document.getElementById('profPhone').value = me.phone || '';
+    document.getElementById('profLocation').value = me.location || '';
+  }catch(e){}
+  loadDashboard();
+  loadJobs();
+}
+
+function goto(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  const item = document.querySelector(`.nav-item[data-page="${page}"]`);
+  if(item) item.classList.add('active');
+  if(page==='dashboard') loadDashboard();
+  if(page==='applications') loadApplications();
+}
+
+async function loadDashboard(){
+  try{
+    const d = await api('/dashboard');
+    document.getElementById('statResume').innerText = d.resume_score ?? '—';
+    document.getElementById('statApps').innerText = d.applications_count;
+    document.getElementById('statInterviews').innerText = d.interviews_count;
+    document.getElementById('statSaved').innerText = d.saved_jobs_count;
+    if (d.resume_score){
+      document.getElementById('dashTip').innerText = d.resume_score < 70
+        ? "Your resume score has room to grow — check the Resume Analyzer for suggestions."
+        : "Strong resume score! Head to Find Jobs and start applying.";
+    }
+  }catch(e){}
+}
+
+async function loadJobs(){
+  const q = document.getElementById('jobQuery').value;
+  const location = document.getElementById('jobLocation').value;
+  const experience = document.getElementById('jobExperience').value;
+  const params = new URLSearchParams();
+  if(q) params.set('q', q);
+  if(location) params.set('location', location);
+  if(experience) params.set('experience', experience);
+  const list = document.getElementById('jobsList');
+  list.innerHTML = '<div class="empty">Loading...</div>';
+  try{
+    const jobs = await api('/jobs?' + params.toString());
+    if(jobs.length===0){ list.innerHTML = '<div class="empty">No jobs match your search.</div>'; return; }
+    list.innerHTML = jobs.map(j=>`
+      <div class="card">
+        <div class="job-title">${j.title}</div>
+        <div class="job-meta">${j.company || ''} · 📍 ${j.location || ''} · ${j.salary || ''}</div>
+        <div style="margin-bottom:10px;"><span class="pill">${j.experience}</span></div>
+        <p style="font-size:13px; color:var(--text-dim);">${j.description || ''}</p>
+        <div class="row">
+          <button class="primary" style="width:auto;" onclick="applyJob(${j.id})">Apply</button>
+          <button class="ghost" onclick="saveJob(${j.id})">Save</button>
+        </div>
+      </div>
+    `).join('');
+  }catch(e){ list.innerHTML = '<div class="empty">Could not load jobs.</div>'; }
+}
+
+async function applyJob(jobId){
+  try{ await api('/applications', {method:'POST', body: JSON.stringify({job_id: jobId})}); alert('Applied!'); }
+  catch(e){ alert(e.message); }
+}
+async function saveJob(jobId){
+  try{ await api(`/jobs/${jobId}/save`, {method:'POST'}); alert('Saved!'); }
+  catch(e){ alert(e.message); }
+}
+
+async function uploadResume(){
+  const fileInput = document.getElementById('resumeFile');
+  if(!fileInput.files.length){ document.getElementById('resumeError').innerText = 'Choose a PDF or DOCX file first.'; return; }
+  const form = new FormData();
+  form.append('file', fileInput.files[0]);
+  document.getElementById('resumeError').innerText = '';
+  try{
+    const resume = await api('/resume/upload', {method:'POST', body: form});
+    const analysis = JSON.parse(resume.analysis);
+    renderResumeResult(resume.ats_score, analysis);
+    loadDashboard();
+  }catch(e){ document.getElementById('resumeError').innerText = e.message; }
+}
+
+function renderResumeResult(score, analysis){
+  const el = document.getElementById('resumeResult');
+  const suggestions = (analysis.suggestions || []).map(s=>`<div class="suggestion">⚠ ${s}</div>`).join('');
+  const skills = (analysis.skills_detected || []).map(s=>`<span class="pill">${s}</span>`).join(' ');
+  el.innerHTML = `
+    <div class="card" style="text-align:center;">
+      <div class="score-ring" style="--pct:${score};"><span>${score}/100</span></div>
+      <div style="color:var(--text-dim); font-size:13px;">ATS Score</div>
+    </div>
+    <div class="card"><h3 style="margin-top:0;">Skills detected</h3>${skills || '<span class="empty">None detected — try adding a Skills section.</span>'}</div>
+    <div class="card"><h3 style="margin-top:0;">Suggestions</h3>${suggestions}</div>
+  `;
+}
+
+async function startInterview(){
+  const role = document.getElementById('interviewRole').value;
+  const difficulty = document.getElementById('interviewDifficulty').value;
+  document.getElementById('interviewError').innerText = '';
+  document.getElementById('feedbackBox').style.display = 'none';
+  try{
+    currentQuestions = await api(`/interview/questions?role=${encodeURIComponent(role)}&difficulty=${difficulty}`);
+    const box = document.getElementById('interviewQuestions');
+    box.style.display = 'block';
+    box.innerHTML = currentQuestions.map((q,i)=>`
+      <div class="card qbox">
+        <div class="qn">Question ${i+1} of ${currentQuestions.length}</div>
+        <div class="qtext">${q.question}</div>
+        <textarea rows="3" data-qid="${q.id}" placeholder="Type your answer..."></textarea>
+      </div>
+    `).join('') + `<button class="primary" onclick="submitInterview('${role}')">Submit Answers</button>`;
+  }catch(e){ document.getElementById('interviewError').innerText = e.message; }
+}
+
+async function submitInterview(role){
+  const textareas = document.querySelectorAll('#interviewQuestions textarea');
+  const answers = Array.from(textareas).map(t=>({question_id: parseInt(t.dataset.qid), answer: t.value}));
+  try{
+    const result = await api('/interview/submit', {method:'POST', body: JSON.stringify({role, answers})});
+    document.getElementById('feedbackBox').style.display = 'block';
+    document.getElementById('feedbackRing').style.setProperty('--pct', result.score);
+    document.getElementById('feedbackScore').innerText = result.score + '/100';
+    document.getElementById('feedbackText').innerText = result.feedback;
+    document.getElementById('feedbackBox').scrollIntoView({behavior:'smooth'});
+  }catch(e){ alert(e.message); }
+}
+
+async function loadApplications(){
+  const list = document.getElementById('applicationsList');
+  list.innerHTML = '<div class="empty">Loading...</div>';
+  try{
+    const apps = await api('/applications');
+    if(apps.length===0){ list.innerHTML = '<div class="empty">No applications yet — go apply to a job!</div>'; return; }
+    list.innerHTML = apps.map(a=>`
+      <div class="card">
+        <div class="job-title">${a.job.title}</div>
+        <div class="job-meta">${a.job.company || ''} · Applied ${a.applied_date}</div>
+        <span class="status-${a.status}">● ${a.status}</span>
+        ${a.interview_date ? `<span class="job-meta"> · Interview: ${a.interview_date}</span>` : ''}
+      </div>
+    `).join('');
+  }catch(e){ list.innerHTML = '<div class="empty">Could not load applications.</div>'; }
+}
+
+async function saveProfile(){
+  const name = document.getElementById('profName').value;
+  const phone = document.getElementById('profPhone').value;
+  const location = document.getElementById('profLocation').value;
+  try{
+    await api('/users/profile', {method:'PUT', body: JSON.stringify({name, phone, location})});
+    document.getElementById('profError').innerText = 'Saved!';
+    setTimeout(()=>document.getElementById('profError').innerText='', 2000);
+  }catch(e){ document.getElementById('profError').style.color='var(--danger)'; document.getElementById('profError').innerText = e.message; }
+}
+
+// Auto-login if token exists
+if (token) enterApp();
+</script>
+</body>
+</html>
