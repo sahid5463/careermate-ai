@@ -203,6 +203,8 @@
         <button class="ghost" onclick="loadJobs()">Search</button>
       </div>
       <div id="jobsList"></div>
+      <button class="ghost" onclick="emailSavedJobs()">✉️ Email me my saved jobs</button>
+      <div class="error-msg" id="digestMsg" style="color:var(--growth); margin-bottom:20px;"></div>
 
       <h1 class="page-title" style="margin-top:36px;">Live Jobs from the Internet</h1>
       <p style="color:var(--text-dim); font-size:13px; margin-top:-14px;">Real, current postings pulled from across the web. These link out to the original listing — use the search above for jobs you can Apply/Save/Track inside CareerMate.</p>
@@ -397,6 +399,19 @@ async function loadJobs(){
       </div>
     `).join('');
   }catch(e){ list.innerHTML = '<div class="empty">Could not load jobs.</div>'; }
+}
+
+async function emailSavedJobs(){
+  const msg = document.getElementById('digestMsg');
+  msg.style.color = 'var(--growth)';
+  msg.innerText = 'Sending...';
+  try{
+    const result = await api('/notifications/saved-jobs-digest', {method:'POST'});
+    msg.innerText = result.detail;
+  }catch(e){
+    msg.style.color = 'var(--danger)';
+    msg.innerText = e.message;
+  }
 }
 
 async function loadLiveJobs(){
