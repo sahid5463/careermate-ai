@@ -12,18 +12,20 @@ router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 CRON_SECRET = os.getenv("CRON_SECRET", "").strip()
 
 
-@router.post("/interview-reminders")
+@router.api_route("/interview-reminders", methods=["GET", "POST"])
 def send_interview_reminders(
     db: Session = Depends(get_db),
+    secret: str = "",
     x_cron_secret: str = Header(default=""),
 ):
     """
     Emails everyone whose interview is TOMORROW. Meant to be called once a
-    day by an external free cron service (e.g. cron-job.org), not by the
-    frontend. Protected by a shared secret header so randoms on the internet
-    can't trigger mass emails from your app.
+    day by an external free cron service. Accepts the shared secret either
+    as a query param (?secret=...) for simple GET-only cron tools, or as an
+    X-Cron-Secret header for tools that support custom headers.
     """
-    if not CRON_SECRET or x_cron_secret != CRON_SECRET:
+    provided = secret or x_cron_secret
+    if not CRON_SECRET or provided != CRON_SECRET:
         raise HTTPException(status_code=401, detail="Invalid or missing cron secret")
 
     tomorrow = date.today() + timedelta(days=1)
