@@ -30,7 +30,7 @@ def send_interview_reminders(
         raise HTTPException(status_code=401, detail="Invalid or missing cron secret")
 
     tomorrow = date.today() + timedelta(days=1)
-    ...
+    
     applications = (
         db.query(models.Application)
         .filter(models.Application.interview_date == tomorrow)
