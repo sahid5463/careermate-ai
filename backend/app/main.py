@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 from .database import Base, engine
-from .routers import auth, users, resumes, jobs, applications, interview, dashboard
+from .routers import auth, users, resumes, jobs, applications, interview, dashboard, notifications
 
 load_dotenv()
 
@@ -29,6 +29,7 @@ app.include_router(jobs.router)
 app.include_router(applications.router)
 app.include_router(interview.router)
 app.include_router(dashboard.router)
+app.include_router(notifications.router)
 
 
 @app.get("/")
