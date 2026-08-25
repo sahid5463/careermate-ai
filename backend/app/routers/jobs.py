@@ -1,3 +1,7 @@
+import os
+import json
+import urllib.request
+import urllib.parse
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -7,6 +11,10 @@ from .. import models, schemas, security
 from ..database import get_db
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
+
+ADZUNA_APP_ID = os.getenv("ADZUNA_APP_ID", "").strip()
+ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY", "").strip()
+ADZUNA_COUNTRY = os.getenv("ADZUNA_COUNTRY", "in").strip()  # in = India
 
 
 @router.get("", response_model=List[schemas.JobOut])
@@ -51,6 +59,66 @@ def save_job(
     db.add(models.SavedJob(user_id=current_user.id, job_id=job_id))
     db.commit()
     return {"detail": "Job saved"}
+
+
+@router.get("/live/search")
+def live_job_search(
+    q: str = "software developer",
+    location: Optional[str] = None,
+    page: int = 1,
+):
+    """
+    Searches real, current job listings from across the internet via the
+    Adzuna job-search API (a legitimate aggregator, not scraping). Requires
+    ADZUNA_APP_ID and ADZUNA_APP_KEY to be set as environment variables —
+    get free credentials at https://developer.adzuna.com
+    """
+    if not ADZUNA_APP_ID or not ADZUNA_APP_KEY:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Live job search isn't configured yet. Get a free App ID and "
+                "App Key at https://developer.adzuna.com and set ADZUNA_APP_ID "
+                "and ADZUNA_APP_KEY as environment variables."
+            ),
+        )
+
+    params = {
+        "app_id": ADZUNA_APP_ID,
+        "app_key": ADZUNA_APP_KEY,
+        "results_per_page": 20,
+        "what": q,
+        "content-type": "application/json",
+    }
+    if location:
+        params["where"] = location
+
+    url = (
+        f"https://api.adzuna.com/v1/api/jobs/{ADZUNA_COUNTRY}/search/{page}"
+        f"?{urllib.parse.urlencode(params)}"
+    )
+
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "CareerMateAI/1.0"})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Could not reach job search provider: {e}")
+
+    results = []
+    for item in data.get("results", []):
+        results.append({
+            "title": item.get("title"),
+            "company": (item.get("company") or {}).get("display_name"),
+            "location": (item.get("location") or {}).get("display_name"),
+            "salary_min": item.get("salary_min"),
+            "salary_max": item.get("salary_max"),
+            "description": item.get("description"),
+            "apply_url": item.get("redirect_url"),
+            "created": item.get("created"),
+        })
+
+    return {"count": data.get("count", len(results)), "results": results}
 
 
 @router.get("/saved/list", response_model=List[schemas.JobOut])
