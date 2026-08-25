@@ -20,8 +20,9 @@ def send_interview_reminders(
 ):
     """
     Emails everyone whose interview is TOMORROW. Meant to be called once a
-    day by an external free cron service. Accepts the shared secret either
-    as a query param (?secret=...) for simple GET-only cron tools, or as an
+    day by an external free cron service (e.g. cron-job.org), not by the
+    frontend. Protected by a shared secret, accepted either as a query
+    param (?secret=...) for simple GET-only cron tools, or as an
     X-Cron-Secret header for tools that support custom headers.
     """
     provided = secret or x_cron_secret
@@ -29,6 +30,7 @@ def send_interview_reminders(
         raise HTTPException(status_code=401, detail="Invalid or missing cron secret")
 
     tomorrow = date.today() + timedelta(days=1)
+    ...
     applications = (
         db.query(models.Application)
         .filter(models.Application.interview_date == tomorrow)
