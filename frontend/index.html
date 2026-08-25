@@ -203,6 +203,15 @@
         <button class="ghost" onclick="loadJobs()">Search</button>
       </div>
       <div id="jobsList"></div>
+
+      <h1 class="page-title" style="margin-top:36px;">Live Jobs from the Internet</h1>
+      <p style="color:var(--text-dim); font-size:13px; margin-top:-14px;">Real, current postings pulled from across the web. These link out to the original listing — use the search above for jobs you can Apply/Save/Track inside CareerMate.</p>
+      <div class="search-bar">
+        <input type="text" id="liveJobQuery" placeholder="🔍 Search live jobs..." value="software developer" />
+        <input type="text" id="liveJobLocation" placeholder="Location (optional)" />
+        <button class="ghost" onclick="loadLiveJobs()">Search Internet</button>
+      </div>
+      <div id="liveJobsList"></div>
     </div>
 
     <!-- Resume Analyzer -->
@@ -267,7 +276,7 @@
 </div>
 
 <script>
- const API = "https://careermate-ai-k640.onrender.com/api";
+const API = "http://localhost:8000/api";
 let token = localStorage.getItem("cm_token") || null;
 let currentQuestions = [];
 
@@ -283,7 +292,14 @@ async function api(path, opts={}){
   const res = await fetch(API + path, {...opts, headers});
   if (!res.ok){
     const err = await res.json().catch(()=>({detail:"Request failed"}));
-    throw new Error(err.detail || "Request failed");
+    let message = err.detail || "Request failed";
+    if (Array.isArray(message)){
+      // FastAPI validation errors come back as an array of {loc, msg, type}
+      message = message.map(m => m.msg || JSON.stringify(m)).join("; ");
+    } else if (typeof message === "object"){
+      message = JSON.stringify(message);
+    }
+    throw new Error(message);
   }
   return res.status === 204 ? null : res.json();
 }
@@ -327,6 +343,7 @@ async function enterApp(){
   }catch(e){}
   loadDashboard();
   loadJobs();
+  loadLiveJobs();
 }
 
 function goto(page){
@@ -380,6 +397,38 @@ async function loadJobs(){
       </div>
     `).join('');
   }catch(e){ list.innerHTML = '<div class="empty">Could not load jobs.</div>'; }
+}
+
+async function loadLiveJobs(){
+  const q = document.getElementById('liveJobQuery').value || 'software developer';
+  const location = document.getElementById('liveJobLocation').value;
+  const params = new URLSearchParams({q});
+  if (location) params.set('location', location);
+  const list = document.getElementById('liveJobsList');
+  list.innerHTML = '<div class="empty">Searching the internet...</div>';
+  try{
+    const data = await api('/jobs/live/search?' + params.toString());
+    const jobs = data.results || [];
+    if(jobs.length===0){ list.innerHTML = '<div class="empty">No live jobs found for this search.</div>'; return; }
+    list.innerHTML = jobs.map(j=>{
+      const salary = (j.salary_min && j.salary_max)
+        ? `₹${Math.round(j.salary_min).toLocaleString()} - ₹${Math.round(j.salary_max).toLocaleString()}`
+        : '';
+      const desc = (j.description || '').slice(0, 220) + ((j.description||'').length > 220 ? '…' : '');
+      return `
+        <div class="card">
+          <div class="job-title">${j.title || 'Untitled role'}</div>
+          <div class="job-meta">${j.company || ''} · 📍 ${j.location || ''} ${salary ? '· ' + salary : ''}</div>
+          <p style="font-size:13px; color:var(--text-dim);">${desc}</p>
+          <a href="${j.apply_url}" target="_blank" rel="noopener">
+            <button class="primary" style="width:auto;">View & Apply ↗</button>
+          </a>
+        </div>
+      `;
+    }).join('');
+  }catch(e){
+    list.innerHTML = `<div class="empty">${e.message}</div>`;
+  }
 }
 
 async function applyJob(jobId){
