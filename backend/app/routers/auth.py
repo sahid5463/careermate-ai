@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from .. import models, schemas, security
 from ..database import get_db
+from .. import email_utils
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -23,6 +24,13 @@ def register(payload: schemas.UserCreate, db: Session = Depends(get_db)):
     db.refresh(user)
 
     token = security.create_access_token({"sub": str(user.id)})
+
+    email_utils.send_email(
+        to=user.email,
+        subject="Welcome to CareerMate AI 👋",
+        html_body=email_utils.welcome_email_html(user.name),
+    )
+
     return {"access_token": token}
 
 
